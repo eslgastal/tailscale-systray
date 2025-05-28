@@ -18,10 +18,10 @@ $ tailscale-systray
 
 ### Install requirements
 
-Building app requires gcc, libgtk-3-dev, libayatana-appindicator3-dev
+Building app requires go, gcc, libgtk-3-dev, libayatana-appindicator3-dev
 
 ```
-sudo apt-get install gcc libgtk-3-dev libayatana-appindicator3-dev
+sudo apt-get install golang-go gcc libgtk-3-dev libayatana-appindicator3-dev
 ```
 
 ### Install app
@@ -30,7 +30,7 @@ sudo apt-get install gcc libgtk-3-dev libayatana-appindicator3-dev
 go install -v github.com/mattn/tailscale-systray@latest
 ```
 
-At this point you can start it with `tailscale-systray`.
+At this point you can start it with `$HOME/go/bin/tailscale-systray`.
 
 ### Run at startup
 
