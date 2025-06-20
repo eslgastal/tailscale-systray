@@ -226,7 +226,11 @@ func onReady() {
 							}
 						}(item, title)
 					}
-					item.Check(exitNodeActive)
+					if exitNodeActive {
+						item.Check()
+					} else {
+						item.Uncheck()
+					}
 					if exitNodeActive {
 						currentExitNode = title
 					}
