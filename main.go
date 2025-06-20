@@ -170,7 +170,12 @@ func onReady() {
 				systray.SetTooltip("Tailscale: Connected")
 				mConnect.Disable()
 				mDisconnect.Enable()
-				systray.SetIcon(iconOn)
+				// Set icon based on exit node status
+				if hasActiveExitNode(status) {
+					systray.SetIcon(iconOnExitNodeActive)
+				} else {
+					systray.SetIcon(iconOn)
+				}
 				enabled = true
 			} else if !status.TailscaleUp && enabled {
 				setDisconnected()
@@ -178,6 +183,15 @@ func onReady() {
 
 			for _, v := range items {
 				v.found = false
+			}
+
+			// Update icon if already enabled and exit node status changes
+			if enabled {
+				if hasActiveExitNode(status) {
+					systray.SetIcon(iconOnExitNodeActive)
+				} else {
+					systray.SetIcon(iconOn)
+				}
 			}
 
 			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), myIP))
@@ -321,6 +335,19 @@ func onReady() {
 			}()
 		}
 	}()
+}
+
+// hasActiveExitNode returns true if any peer or self is an active exit node.
+func hasActiveExitNode(status *Status) bool {
+	if status.Self.ExitNode {
+		return true
+	}
+	for _, peer := range status.Peers {
+		if peer.ExitNode {
+			return true
+		}
+	}
+	return false
 }
 
 func openBrowser(url string) {
