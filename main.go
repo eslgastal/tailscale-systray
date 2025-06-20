@@ -127,7 +127,8 @@ func onReady() {
 		systray.Quit()
 	}()
 
-	go func() {
+	// --- UI update logic extracted to a function ---
+	updateUI := func() {
 		type Item struct {
 			menu  *systray.MenuItem
 			title string
@@ -147,17 +148,18 @@ func onReady() {
 			}
 		}
 
-		for {
+		var doUpdate func()
+		doUpdate = func() {
 			rawStatus, err := exec.Command("tailscale", "status", "--json").Output()
 			if err != nil {
 				setDisconnected()
-				continue
+				return
 			}
 
 			status := new(Status)
 			if err := json.Unmarshal(rawStatus, status); err != nil {
 				setDisconnected()
-				continue
+				return
 			}
 
 			mu.Lock()
@@ -239,9 +241,8 @@ func onReady() {
 										)
 									}
 									// Instantly update the list of nodes in the submenu
-									// by triggering a status refresh (by running the status command)
-									// This is a minimal way to "poke" the update loop
-									exec.Command("tailscale", "status", "--json").Output()
+									// by calling the UI update function directly
+									doUpdate()
 								}()
 							}
 						}(item, title)
@@ -315,10 +316,18 @@ func onReady() {
 					delete(items, k)
 				}
 			}
-
-			time.Sleep(10 * time.Second)
 		}
-	}()
+
+		// Run the update loop
+		go func() {
+			for {
+				doUpdate()
+				time.Sleep(10 * time.Second)
+			}
+		}()
+	}
+
+	updateUI()
 
 	// Exit Node: disable handler
 	go func() {
