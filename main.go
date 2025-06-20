@@ -98,6 +98,13 @@ func onReady() {
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
 
+	// Exit Node submenu
+	mExitNode := systray.AddMenuItem("Exit Node", "Configure exit node")
+	mDisableExitNode := mExitNode.AddSubMenuItem("Disable Exit Node", "Disable all exit nodes")
+	mDisableExitNode.Hide()
+	exitNodeItems := map[string]*systray.MenuItem{}
+	var currentExitNode string
+
 	systray.AddSeparator()
 	mAdminConsole := systray.AddMenuItem("Admin Console...", "")
 	go func() {
@@ -173,10 +180,59 @@ func onReady() {
 
 			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), myIP))
 
+			// --- Exit Node submenu logic ---
+			// Hide all exit node items by default
+			for _, item := range exitNodeItems {
+				item.Hide()
+			}
+			mDisableExitNode.Hide()
+			currentExitNode = ""
+			exitNodeCandidates := map[string]*systray.MenuItem{}
+
 			for _, peer := range status.Peers {
 				ip := peer.TailscaleIPs[0]
 				peerName := peer.DisplayName
 				title := peerName.String()
+
+				// Exit Node submenu: check for ExitNodeOption
+				exitNodeOption := peer.ExitNodeOption
+				exitNodeActive := peer.ExitNode
+
+				if exitNodeOption {
+					var item *systray.MenuItem
+					if old, ok := exitNodeItems[title]; ok {
+						item = old
+						item.Show()
+					} else {
+						item = mExitNode.AddSubMenuItemCheckbox(title, fmt.Sprintf("Use %s as exit node", title), false)
+						exitNodeItems[title] = item
+						go func(item *systray.MenuItem, nodeName string) {
+							for {
+								_, ok := <-item.ClickedCh
+								if !ok {
+									break
+								}
+								// Set this node as exit node
+								go func() {
+									b, err := exec.Command("tailscale", "set", "--exit-node", nodeName).CombinedOutput()
+									if err != nil {
+										beeep.Notify(
+											"Tailscale",
+											fmt.Sprintf("Failed to set exit node: %s", string(b)),
+											"",
+										)
+									}
+								}()
+							}
+						}(item, title)
+					}
+					item.Check(exitNodeActive)
+					if exitNodeActive {
+						currentExitNode = title
+					}
+					item.Show()
+					exitNodeCandidates[title] = item
+				}
 
 				var sub *systray.MenuItem
 				switch peerName.(type) {
@@ -221,6 +277,13 @@ func onReady() {
 				}
 			}
 
+			// Show "Disable Exit Node" if any exit node is active
+			if currentExitNode != "" {
+				mDisableExitNode.Show()
+			} else {
+				mDisableExitNode.Hide()
+			}
+
 			for k, v := range items {
 				if !v.found {
 					// TODO fix race condition
@@ -230,6 +293,26 @@ func onReady() {
 			}
 
 			time.Sleep(10 * time.Second)
+		}
+	}()
+
+	// Exit Node: disable handler
+	go func() {
+		for {
+			_, ok := <-mDisableExitNode.ClickedCh
+			if !ok {
+				break
+			}
+			go func() {
+				b, err := exec.Command("tailscale", "set", "--exit-node", "").CombinedOutput()
+				if err != nil {
+					beeep.Notify(
+						"Tailscale",
+						fmt.Sprintf("Failed to disable exit node: %s", string(b)),
+						"",
+					)
+				}
+			}()
 		}
 	}()
 }
