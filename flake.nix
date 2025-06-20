@@ -18,7 +18,7 @@
           pname = "tailscale-systray";
           version = "unstable";
           src = ./.;
-          vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          vendorHash = "sha256-YJ74SeZAMS+dXyoPhPTJ3L+5uL5bF8gumhMOqfvmlms=";
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ pkgs.gtk3 pkgs.libayatana-appindicator ];
           proxyVendor = true;
