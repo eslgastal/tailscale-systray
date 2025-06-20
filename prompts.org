@@ -1,0 +1,64 @@
+* User:
+Add a nix flake to build the current package, based on the following default.nix file:
+
+#+begin_src nix :tangle default.nix
+{ lib
+, buildGoModule
+, fetchFromGitHub
+, pkg-config
+, gtk3
+, libayatana-appindicator
+}:
+buildGoModule rec {
+  pname = "tailscale-systray";
+  version = "2022-10-19";
+
+  src = fetchFromGitHub {
+    owner = "mattn";
+    repo = pname;
+    rev = "e7f8893684e7b8779f34045ca90e5abe6df6056d";
+    sha256 = "sha256-3kozp6jq0xGllxoK2lGCNUahy/FvXyq11vNSxfDehKE=";
+  };
+
+  vendorHash = "sha256-YJ74SeZAMS+dXyoPhPTJ3L+5uL5bF8gumhMOqfvmlms=";
+
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ gtk3 libayatana-appindicator ];
+
+  proxyVendor = true;
+
+  meta = with lib; {
+    description = "Tailscale systray";
+    homepage = "https://github.com/mattn/tailscale-systray";
+    license = licenses.mit;
+    maintainers = with maintainers; [ qbit ];
+    mainProgram = "tailscale-systray";
+  };
+}
+#+end_src
+* User:
+Implement a new submenu for enabling/disabling the use of an exit node.
+
+Exit nodes are those nodes for which tailscale status --json has "ExitNodeOption" as "true"
+
+#+begin_src json
+"nodekey:xxx": {
+    "ID": "xxx",
+    "PublicKey": "nodekey:xxx",
+    "HostName": "MyServer",
+	  "ExitNodeOption": true,
+	  "ExitNode": false,
+	...
+}
+#+end_src
+
+To enable the use of the exit node, I can use
+
+tailscale set --exit-node MyServer
+
+To disable all exit nodes, I can use
+
+tailscale set --exit-node ""
+
+To check which node is currently used as exit node, I need to check that "ExitNode": true on the tailscale status --json output for that node.
+
