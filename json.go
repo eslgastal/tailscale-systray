@@ -50,9 +50,11 @@ type rawStatus struct {
 }
 
 type RawMachine struct {
-	DNSName      string   `json:"DNSName"`
-	HostName     string   `json:"HostName"`
-	TailscaleIPs []string `json:"TailscaleIPs"`
+	DNSName        string   `json:"DNSName"`
+	HostName       string   `json:"HostName"`
+	TailscaleIPs   []string `json:"TailscaleIPs"`
+	ExitNodeOption bool     `json:"ExitNodeOption"`
+	ExitNode       bool     `json:"ExitNode"`
 }
 
 func (rm RawMachine) ToMachine(dnsSuffix string) Machine {
