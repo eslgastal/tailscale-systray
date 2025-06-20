@@ -238,6 +238,10 @@ func onReady() {
 											"",
 										)
 									}
+									// Instantly update the list of nodes in the submenu
+									// by triggering a status refresh (by running the status command)
+									// This is a minimal way to "poke" the update loop
+									exec.Command("tailscale", "status", "--json").Output()
 								}()
 							}
 						}(item, title)
