@@ -62,6 +62,22 @@ func onReady() {
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
 
+	// Helper to update DNS routing menu state
+	updateDNSRoutingMenu := func(m *systray.MenuItem) {
+		enabled, err := getTailscaleDNSStatus()
+		if err != nil {
+			m.SetTitle("Use Tailscale DNS (unknown)")
+			m.Uncheck()
+			return
+		}
+		m.SetTitle("Use Tailscale DNS")
+		if enabled {
+			m.Check()
+		} else {
+			m.Uncheck()
+		}
+	}
+
 	// DNS Routing menu
 	mDNSRouting := systray.AddMenuItemCheckbox("Use Tailscale DNS", "Enable or disable Tailscale DNS routing", false)
 	go func() {
@@ -158,22 +174,6 @@ func onReady() {
 	}()
 
 	// --- UI update logic extracted to a function ---
-
-	// Helper to update DNS routing menu state
-	updateDNSRoutingMenu := func(m *systray.MenuItem) {
-		enabled, err := getTailscaleDNSStatus()
-		if err != nil {
-			m.SetTitle("Use Tailscale DNS (unknown)")
-			m.Uncheck()
-			return
-		}
-		m.SetTitle("Use Tailscale DNS")
-		if enabled {
-			m.Check()
-		} else {
-			m.Uncheck()
-		}
-	}
 
 	updateUI := func() {
 		type Item struct {
