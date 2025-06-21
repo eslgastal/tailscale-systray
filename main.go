@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sync"
 	"time"
@@ -405,14 +406,15 @@ func getTailscaleDNSStatus() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	reEnabled := regexp.MustCompile(`^Tailscale DNS:\s*enabled`)
+	reDisabled := regexp.MustCompile(`^Tailscale DNS:\s*disabled`)
 	lines := string(out)
 	for _, line := range splitLines(lines) {
-		if len(line) >= 15 && line[:15] == "Tailscale DNS:" {
-			status := line[15:]
-			if len(status) > 0 {
-				status = trimSpace(status)
-				return status == "enabled", nil
-			}
+		if reEnabled.MatchString(line) {
+			return true, nil
+		}
+		if reDisabled.MatchString(line) {
+			return false, nil
 		}
 	}
 	return false, nil
