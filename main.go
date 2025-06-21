@@ -79,36 +79,6 @@ func onReady() {
 		}
 	}
 
-	// DNS Routing menu
-	mDNSRouting := systray.AddMenuItemCheckbox("Use Tailscale DNS", "Enable or disable Tailscale DNS routing", false)
-	go func() {
-		for {
-			_, ok := <-mDNSRouting.ClickedCh
-			if !ok {
-				break
-			}
-			go func() {
-				enable := !mDNSRouting.Checked()
-				var arg string
-				if enable {
-					arg = "--accept-dns=true"
-				} else {
-					arg = "--accept-dns=false"
-				}
-				b, err := exec.Command("tailscale", "set", arg).CombinedOutput()
-				if err != nil {
-					beeep.Notify(
-						"Tailscale",
-						fmt.Sprintf("Failed to set DNS routing: %s", string(b)),
-						"",
-					)
-				}
-				// Update the checkbox state after toggling
-				updateDNSRoutingMenu(mDNSRouting)
-			}()
-		}
-	}()
-
 	if executable("pkexec") {
 		go doConnectionControl(mConnect, "up")
 		go doConnectionControl(mDisconnect, "down")
@@ -153,6 +123,36 @@ func onReady() {
 	mDisableExitNode.Hide()
 	exitNodeItems := map[string]*systray.MenuItem{}
 	var currentExitNode string
+
+	// DNS Routing menu (moved here, after Exit Node)
+	mDNSRouting := systray.AddMenuItemCheckbox("Use Tailscale DNS", "Enable or disable Tailscale DNS routing", false)
+	go func() {
+		for {
+			_, ok := <-mDNSRouting.ClickedCh
+			if !ok {
+				break
+			}
+			go func() {
+				enable := !mDNSRouting.Checked()
+				var arg string
+				if enable {
+					arg = "--accept-dns=true"
+				} else {
+					arg = "--accept-dns=false"
+				}
+				b, err := exec.Command("tailscale", "set", arg).CombinedOutput()
+				if err != nil {
+					beeep.Notify(
+						"Tailscale",
+						fmt.Sprintf("Failed to set DNS routing: %s", string(b)),
+						"",
+					)
+				}
+				// Update the checkbox state after toggling
+				updateDNSRoutingMenu(mDNSRouting)
+			}()
+		}
+	}()
 
 	systray.AddSeparator()
 	mAdminConsole := systray.AddMenuItem("Admin Console...", "")
