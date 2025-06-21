@@ -62,6 +62,36 @@ func onReady() {
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
 
+	// DNS Routing menu
+	mDNSRouting := systray.AddMenuItemCheckbox("Use Tailscale DNS", "Enable or disable Tailscale DNS routing", false)
+	go func() {
+		for {
+			_, ok := <-mDNSRouting.ClickedCh
+			if !ok {
+				break
+			}
+			go func() {
+				enable := !mDNSRouting.Checked()
+				var arg string
+				if enable {
+					arg = "--accept-dns=true"
+				} else {
+					arg = "--accept-dns=false"
+				}
+				b, err := exec.Command("tailscale", "set", arg).CombinedOutput()
+				if err != nil {
+					beeep.Notify(
+						"Tailscale",
+						fmt.Sprintf("Failed to set DNS routing: %s", string(b)),
+						"",
+					)
+				}
+				// Update the checkbox state after toggling
+				updateDNSRoutingMenu(mDNSRouting)
+			}()
+		}
+	}()
+
 	if executable("pkexec") {
 		go doConnectionControl(mConnect, "up")
 		go doConnectionControl(mDisconnect, "down")
@@ -128,6 +158,23 @@ func onReady() {
 	}()
 
 	// --- UI update logic extracted to a function ---
+
+	// Helper to update DNS routing menu state
+	updateDNSRoutingMenu := func(m *systray.MenuItem) {
+		enabled, err := getTailscaleDNSStatus()
+		if err != nil {
+			m.SetTitle("Use Tailscale DNS (unknown)")
+			m.Uncheck()
+			return
+		}
+		m.SetTitle("Use Tailscale DNS")
+		if enabled {
+			m.Check()
+		} else {
+			m.Uncheck()
+		}
+	}
+
 	updateUI := func() {
 		type Item struct {
 			menu  *systray.MenuItem
@@ -322,12 +369,15 @@ func onReady() {
 		go func() {
 			for {
 				doUpdate()
+				updateDNSRoutingMenu(mDNSRouting)
 				time.Sleep(10 * time.Second)
 			}
 		}()
 	}
 
 	updateUI()
+	// Initial DNS routing menu state
+	updateDNSRoutingMenu(mDNSRouting)
 
 	// Exit Node: disable handler
 	go func() {
@@ -348,6 +398,52 @@ func onReady() {
 			}()
 		}
 	}()
+}
+
+func getTailscaleDNSStatus() (bool, error) {
+	out, err := exec.Command("tailscale", "dns", "status").CombinedOutput()
+	if err != nil {
+		return false, err
+	}
+	lines := string(out)
+	for _, line := range splitLines(lines) {
+		if len(line) >= 15 && line[:15] == "Tailscale DNS:" {
+			status := line[15:]
+			if len(status) > 0 {
+				status = trimSpace(status)
+				return status == "enabled", nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// splitLines splits a string into lines (handles both \n and \r\n)
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+// trimSpace trims leading and trailing spaces from a string
+func trimSpace(s string) string {
+	start, end := 0, len(s)
+	for start < end && (s[start] == ' ' || s[start] == '\t') {
+		start++
+	}
+	for end > start && (s[end-1] == ' ' || s[end-1] == '\t') {
+		end--
+	}
+	return s[start:end]
 }
 
 // hasActiveExitNode returns true if any peer or self is an active exit node.
