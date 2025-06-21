@@ -61,4 +61,22 @@ To disable all exit nodes, I can use
 tailscale set --exit-node ""
 
 To check which node is currently used as exit node, I need to check that "ExitNode": true on the tailscale status --json output for that node.
+* User:
+Implement a new menu option for enabling/disabling the use of Tailscale's DNS routing.
 
+To enable:
+
+tailscale set --accept-dns=true
+
+To disable:
+
+tailscale set --accept-dns=false
+
+To check if it is enabled or disabled, run:
+
+tailscale dns status
+
+The output of the above command will be many lines. One of those lines starts with "Tailscale DNS: <status>" where <status> is either "enabled" or "disabled".
+
+** v2
+Use a more robust check in `getTailscaleDNSStatus`, by using substring matches. For example, you could use a regex to check if the line matches "^Tailscale DNS:[ ]+enabled".
