@@ -154,6 +154,50 @@ func onReady() {
 		}
 	}()
 
+	// Tailscale Routes menu
+	mRoutes := systray.AddMenuItemCheckbox("Use Tailscale Routes", "Enable or disable Tailscale subnet routes", false)
+	updateRoutesMenu := func(m *systray.MenuItem) {
+		enabled, err := getTailscaleRoutesStatus()
+		if err != nil {
+			m.SetTitle("Use Tailscale Routes (unknown)")
+			m.Uncheck()
+			return
+		}
+		m.SetTitle("Use Tailscale Routes")
+		if enabled {
+			m.Check()
+		} else {
+			m.Uncheck()
+		}
+	}
+	go func() {
+		for {
+			_, ok := <-mRoutes.ClickedCh
+			if !ok {
+				break
+			}
+			go func() {
+				enable := !mRoutes.Checked()
+				var arg string
+				if enable {
+					arg = "--accept-routes=true"
+				} else {
+					arg = "--accept-routes=false"
+				}
+				b, err := exec.Command("tailscale", "set", arg).CombinedOutput()
+				if err != nil {
+					beeep.Notify(
+						"Tailscale",
+						fmt.Sprintf("Failed to set routes: %s", string(b)),
+						"",
+					)
+				}
+				// Update the checkbox state after toggling
+				updateRoutesMenu(mRoutes)
+			}()
+		}
+	}()
+
 	systray.AddSeparator()
 	mAdminConsole := systray.AddMenuItem("Admin Console...", "")
 	go func() {
@@ -379,6 +423,8 @@ func onReady() {
 	updateUI()
 	// Initial DNS routing menu state
 	updateDNSRoutingMenu(mDNSRouting)
+	// Initial routes menu state
+	updateRoutesMenu(mRoutes)
 
 	// Exit Node: disable handler
 	go func() {
@@ -418,6 +464,33 @@ func getTailscaleDNSStatus() (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// getTailscaleRoutesStatus returns true if --accept-routes is enabled, false otherwise.
+func getTailscaleRoutesStatus() (bool, error) {
+	out, err := exec.Command("tailscale", "status", "--json").CombinedOutput()
+	if err != nil {
+		return false, err
+	}
+	// Look for the health message indicating routes are disabled
+	var status struct {
+		Health []string `json:"Health"`
+	}
+	if err := json.Unmarshal(out, &status); err != nil {
+		return false, err
+	}
+	for _, msg := range status.Health {
+		// Check if the message contains "--accept-routes is false"
+		if containsAcceptRoutesFalse(msg) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// containsAcceptRoutesFalse returns true if the message contains "--accept-routes is false"
+func containsAcceptRoutesFalse(msg string) bool {
+	return regexp.MustCompile(`--accept-routes\s+is\s+false`).FindString(msg) != ""
 }
 
 // splitLines splits a string into lines (handles both \n and \r\n)
