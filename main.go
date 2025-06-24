@@ -275,11 +275,10 @@ func onReady() {
 			}
 			mu.Unlock()
 
-			// Check DNS and Routes status for icon logic
-			dnsEnabled, routesEnabled, _ := getDNSAndRoutesStatus()
-
 			// Set icon based on exit node and warning status
 			setAppropriateIcon := func() {
+				// Check DNS and Routes status for icon logic
+				dnsEnabled, routesEnabled, _ := getDNSAndRoutesStatus()
 				if hasActiveExitNode(status) {
 					systray.SetIcon(iconOnExitNodeActive)
 				} else if !dnsEnabled || !routesEnabled {
