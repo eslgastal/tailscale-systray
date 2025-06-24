@@ -23,6 +23,8 @@ var (
 	iconOff []byte
 	//go:embed icon/on-with-exit-node.png
 	iconOnExitNodeActive []byte
+	//go:embed icon/on-with-warning.png
+	iconOnWarning []byte
 )
 
 var (
