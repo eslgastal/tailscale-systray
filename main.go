@@ -336,15 +336,20 @@ func onReady() {
 				exitNodeOption := peer.ExitNodeOption
 				exitNodeActive := peer.ExitNode
 
+				// Unicode radio button symbols
+				const radioOn = "● "
+				const radioOff = "○ "
+
 				if exitNodeOption {
 					var item *systray.MenuItem
 					if old, ok := exitNodeItems[title]; ok {
 						item = old
 						item.Show()
 					} else {
-						item = mExitNode.AddSubMenuItemCheckbox(title, fmt.Sprintf("Use %s as exit node", title), false)
+						// Use AddSubMenuItem instead of AddSubMenuItemCheckbox for radio look
+						item = mExitNode.AddSubMenuItem(radioOff+title, fmt.Sprintf("Use %s as exit node", title))
 						exitNodeItems[title] = item
-						go func(item *systray.MenuItem, nodeName string) {
+						go func(item *systray.MenuItem, nodeName, nodeTitle string) {
 							for {
 								_, ok := <-item.ClickedCh
 								if !ok {
@@ -365,12 +370,13 @@ func onReady() {
 									doUpdate()
 								}()
 							}
-						}(item, title)
+						}(item, title, title)
 					}
+					// Set radio button symbol
 					if exitNodeActive {
-						item.Check()
+						item.SetTitle(radioOn + title)
 					} else {
-						item.Uncheck()
+						item.SetTitle(radioOff + title)
 					}
 					if exitNodeActive {
 						currentExitNode = title
