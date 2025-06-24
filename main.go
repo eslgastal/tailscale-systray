@@ -471,6 +471,10 @@ func onReady() {
 						"",
 					)
 				}
+				// Instantly update the icon and menu state
+				if setAppropriateIcon != nil {
+					setAppropriateIcon()
+				}
 			}()
 		}
 	}()
