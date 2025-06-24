@@ -128,6 +128,7 @@ func onReady() {
 
 	// DNS Routing menu (moved here, after Exit Node)
 	mDNSRouting := systray.AddMenuItemCheckbox("Use Tailscale DNS", "Enable or disable Tailscale DNS routing", false)
+	var setAppropriateIcon func()
 	go func() {
 		for {
 			_, ok := <-mDNSRouting.ClickedCh
@@ -152,6 +153,10 @@ func onReady() {
 				}
 				// Update the checkbox state after toggling
 				updateDNSRoutingMenu(mDNSRouting)
+				// Instantly update the icon
+				if setAppropriateIcon != nil {
+					setAppropriateIcon()
+				}
 			}()
 		}
 	}()
@@ -196,6 +201,10 @@ func onReady() {
 				}
 				// Update the checkbox state after toggling
 				updateRoutesMenu(mRoutes)
+				// Instantly update the icon
+				if setAppropriateIcon != nil {
+					setAppropriateIcon()
+				}
 			}()
 		}
 	}()
@@ -276,7 +285,7 @@ func onReady() {
 			mu.Unlock()
 
 			// Set icon based on exit node and warning status
-			setAppropriateIcon := func() {
+			setAppropriateIcon = func() {
 				// Check DNS and Routes status for icon logic
 				dnsEnabled, routesEnabled, _ := getDNSAndRoutesStatus()
 				if hasActiveExitNode(status) {
