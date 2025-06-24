@@ -118,3 +118,5 @@ tailscale status --json | jq '.Health[]' | grep -- "--accept-routes is false"
 : "Some peers are advertising routes but --accept-routes is false"
 
 
+* User:
+If either "Use Tailscale DNS" or "Use Tailscale Routes" is off, then change the app icon to on-with-warning.png (unless the ExitNode option is on, then the on-with-exit-node.png icon takes precedence).
