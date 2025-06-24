@@ -80,3 +80,41 @@ The output of the above command will be many lines. One of those lines starts wi
 
 ** v2
 Use a more robust check in `getTailscaleDNSStatus`, by using substring matches. For example, you could use a regex to check if the line matches "^Tailscale DNS:[ ]+enabled".
+
+* User:
+Implement a new menu option for enabling/disabling the use of Tailscale's routes.
+
+To enable:
+
+tailscale set --accept-routes=true
+
+To disable:
+
+tailscale set --accept-routes=false
+
+To check if it is enabled or disabled, run:
+
+tailscale status --json
+
+And check that the array at entry "Health" contains "Some peers are advertising routes but --accept-routes is false".
+
+For example:
+
+#+begin_src bash :results verbatim
+tailscale status --json | jq '.Health'
+#+end_src
+
+#+RESULTS:
+: [
+:   "Tailscale can't reach the configured DNS servers. Internet connectivity may be affected.",
+:   "Some peers are advertising routes but --accept-routes is false"
+: ]
+
+#+begin_src bash :results verbatim
+tailscale status --json | jq '.Health[]' | grep -- "--accept-routes is false"
+#+end_src
+
+#+RESULTS:
+: "Some peers are advertising routes but --accept-routes is false"
+
+
