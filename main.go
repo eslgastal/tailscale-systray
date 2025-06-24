@@ -242,6 +242,19 @@ func onReady() {
 			}
 		}
 
+		// Helper to determine if DNS and Routes are enabled
+		getDNSAndRoutesStatus := func() (dnsEnabled, routesEnabled bool, err error) {
+			dnsEnabled, err = getTailscaleDNSStatus()
+			if err != nil {
+				return false, false, err
+			}
+			routesEnabled, err = getTailscaleRoutesStatus()
+			if err != nil {
+				return dnsEnabled, false, err
+			}
+			return dnsEnabled, routesEnabled, nil
+		}
+
 		var doUpdate func()
 		doUpdate = func() {
 			rawStatus, err := exec.Command("tailscale", "status", "--json").Output()
@@ -262,16 +275,25 @@ func onReady() {
 			}
 			mu.Unlock()
 
+			// Check DNS and Routes status for icon logic
+			dnsEnabled, routesEnabled, _ := getDNSAndRoutesStatus()
+
+			// Set icon based on exit node and warning status
+			setAppropriateIcon := func() {
+				if hasActiveExitNode(status) {
+					systray.SetIcon(iconOnExitNodeActive)
+				} else if !dnsEnabled || !routesEnabled {
+					systray.SetIcon(iconOnWarning)
+				} else {
+					systray.SetIcon(iconOn)
+				}
+			}
+
 			if status.TailscaleUp && !enabled {
 				systray.SetTooltip("Tailscale: Connected")
 				mConnect.Disable()
 				mDisconnect.Enable()
-				// Set icon based on exit node status
-				if hasActiveExitNode(status) {
-					systray.SetIcon(iconOnExitNodeActive)
-				} else {
-					systray.SetIcon(iconOn)
-				}
+				setAppropriateIcon()
 				enabled = true
 			} else if !status.TailscaleUp && enabled {
 				setDisconnected()
@@ -281,13 +303,9 @@ func onReady() {
 				v.found = false
 			}
 
-			// Update icon if already enabled and exit node status changes
+			// Update icon if already enabled and exit node or warning status changes
 			if enabled {
-				if hasActiveExitNode(status) {
-					systray.SetIcon(iconOnExitNodeActive)
-				} else {
-					systray.SetIcon(iconOn)
-				}
+				setAppropriateIcon()
 			}
 
 			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), myIP))
@@ -417,6 +435,7 @@ func onReady() {
 			for {
 				doUpdate()
 				updateDNSRoutingMenu(mDNSRouting)
+				updateRoutesMenu(mRoutes)
 				time.Sleep(10 * time.Second)
 			}
 		}()
